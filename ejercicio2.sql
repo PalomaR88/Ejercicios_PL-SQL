@@ -116,6 +116,106 @@ begin
     CambiarDatoBalance(p_codAct,v_balanceNew);
 end EliminarDatoBalance;
 /
+
+
+
+
+-- 6. Realiza los módulos de programación necesarios para que una actividad no sea realizada en una fecha concreta por más de 10 personas.
+
+
+create trigger CrearTablaParticipantes
+before insert or update or delete on actividadesrealizadas
+execute procedure RellenarTabla();
+
+create or replace function RellenarTabla()
+returns trigger as $$
+declare
+begin
+	create temp table Participantes as
+	select sum(numpersonas) as numPer, codigoactividad, fecha
+	from actividadesrealizadas
+	group by codigoactividad, fecha;
+	return new;
+end;
+$$ LANGUAGE PLPGSQL;
+
+
+create trigger Max10Participantes
+before insert or update on actividadesrealizadas
+for each row
+	execute procedure NoPermitirMasDe10();
+	
+
+
+
+create or replace function NoPermitirMasDe10()
+returns trigger as $$
+begin
+	PERFORM SumarParticipantes(new.codigoactividad, new.fecha, new.numPersonas);
+return new;
+end;
+$$ LANGUAGE PLPGSQL;
+
+
+create or replace function SumarParticipantes(p_codAct actividades.codigo%type, 
+																						p_fecha actividadesrealizadas.fecha%type, 
+																						p_numPer actividadesrealizadas.numPersonas%type)
+returns numeric as $$
+declare
+	v_numero numeric;
+begin
+	select numPer into v_numero
+	from Participantes
+	where codigoactividad=p_codAct
+	and fecha=p_fecha;
+	v_numero:=v_numero+p_numPer;
+	if v_numero+p_numPer>10 then
+		RAISE EXCEPTION 'Esta actividad ya está llena a esta hora';
+	else
+			if not_data_found then
+				PERFORM AñadirFilaParticipantes(p_codAct, p_fecha, p_numPer);
+			else
+				PERFORM SumarParticipantes (p_codAct, p_fecha, v_numero);
+			end if;
+	end if;
+	drop table Participantes;
+end;
+$$ LANGUAGE PLPGSQL;
+
+
+create or replace function AñadirFilaParticipantes(p_codAct actividades.codigo%type, 
+																						p_fecha actividadesrealizadas.fecha%type, 
+																						p_numPer actividadesrealizadas.numPersonas%type)
+returns numeric as $$
+declare
+begin
+	insert into Participantes values (p_numPer, p_codAct, p_numPer);
+end;
+$$ LANGUAGE PLPGSQL;
+
+
+create or replace function SumarParticipantes (p_codAct actividades.codigo%type, 
+																						p_fecha actividadesrealizadas.fecha%type, 
+																						p_numPer actividadesrealizadas.numPersonas%type)
+returns numeric as $$
+declare
+begin
+	update Participantes set numPer=numPer+p_numPer where codigoactividad=p_codAct and numPersonas=p_numPer;
+end;
+$$ LANGUAGE PLPGSQL;
+
+
+
+
+sum(numpersonas) as numPer, codigoactividad, fecha
+
+CREATE OR REPLACE TRIGGER name
+(AFTER/BEFORE) (INSERT,UPDATE OR DELETE) ON nombretabla
+FOR EACH (fila o sentencia)
+BEGIN
+
+END;
+/
 			
 			
 			
