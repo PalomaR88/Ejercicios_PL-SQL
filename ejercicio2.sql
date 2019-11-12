@@ -1,3 +1,311 @@
+--INSTALACION DEL CLIENTE DE CORREO POSTFIX
+oracle@so:~$ sudo apt-get update
+oracle@so:~$ sudo apt-get install postfix
+
+  ┌─────────────────────┤ Postfix Configuration ├──────────────────────┐
+  │ Escoja el tipo de configuración del servidor de correo que se      │ 
+  │ ajusta mejor a sus necesidades.                                    │ 
+  │                                                                    │ 
+  │  Sin configuración:                                                │ 
+  │   Mantiene la configuración actual intacta.                        │ 
+  │  Sitio de Internet:                                                │ 
+  │   El correo se envía y recibe directamente utilizando SMTP.        │ 
+  │  Internet con «smarthost»:                                         │ 
+  │   El correo se recibe directamente utilizando SMTP o ejecutando    │ 
+  │ una                                                                │ 
+  │   herramienta como «fetchmail». El correo de salida se envía       │ 
+  │ utilizando                                                         │ 
+  │   un «smarthost».                                                  │ 
+  │  Sólo correo local:                                                │ 
+  │   El único correo que se entrega es para los usuarios locales. No  │ 
+  │   hay red.                                                         │ 
+  │                                                                    │ 
+  │ Tipo genérico de configuración de correo:                          │ 
+  │                                                                    │ 
+  │                      Sin configuración                             │ 
+  │                      Sitio de Internet                             │ 
+  │                      Internet con «smarthost»                      │ 
+  │                      Sistema satélite                              │ 
+  │                      Sólo correo local                             │ 
+  │                                                                    │ 
+  │                                                                    │ 
+  │                 <Aceptar>                <Cancelar>                │ 
+  │                                                                    │ 
+  └────────────────────────────────────────────────────────────────────┘ 
+
+ ┌──────────────────────┤ Postfix Configuration ├──────────────────────┐
+ │ El «nombre de sistema de correo» es el nombre del dominio que se    │ 
+ │ utiliza para «cualificar» TODAS las direcciones de correo sin un  │ 
+ │ nombre de dominio. Esto incluye el correo hacia y desde «root»:     │ 
+ │ por favor, no haga que su máquina envíe los correo electrónicos     │ 
+ │ desde root@example.org a menos que root@example.org se lo haya      │ 
+ │ pedido.                                                             │ 
+ │                                                                     │ 
+ │ Otros programas utilizarán este nombre. Deberá ser un único nombre  │ 
+ │ de dominio cualificado (FQDN).                                      │ 
+ │                                                                     │ 
+ │ Por consiguiente, si una dirección de correo en la máquina local    │ 
+ │ es algo@example.org, el valor correcto para esta opción será        │ 
+ │ example.org.                                                        │ 
+ │                                                                     │ 
+ │ Nombre del sistema de correo:                                       │ 
+ │                                                                     │ 
+ │ servidororacle.gonzalonazareno.org_____________ │ 
+ │                                                                     │ 
+ │                  <Aceptar>                 <Cancelar>               │ 
+ │                                                                     │ 
+ └─────────────────────────────────────────────────────────────────────┘ 
+oracle@servidororacle:~$ sudo systemctl start postfix 
+oracle@servidororacle:~$ mailq
+oracle@servidororacle:~$ sudo apt-get install mailutils
+
+
+--INSTALACION Y CONFIGURACION DEL PAQUETE UTL_MAIL
+--Descargar paquetes
+
+SQL> @$ORACLE_HOME/rdbms/admin/utlmail.sql
+SQL> @$ORACLE_HOME/rdbms/admin/prvtmail.plb
+SQL> alter session set SMTP_OUT_SERVER='babuino-smtp.gonzalonazareno.org';
+
+
+--Otorgar permisos al usuario
+SQL> grant execute on UTL_SMTP to paloma;
+SQL> grant execute on utl_mail to paloma;
+SQL> grant execute on sys.UTL_TCP to paloma;
+SQL> grant execute on sys.UTL_SMTP to paloma;
+
+--Crear, añadir y asignar ACL para el uso de la red
+create or replace procedure prueba_correo
+is
+BEGIN
+  DBMS_NETWORK_ACL_ADMIN.CREATE_ACL(acl         => 'www.xml',
+                                    description => 'WWW ACL',
+                                    principal   => 'PALOMA',
+                                    is_grant    => true,
+                                    privilege   => 'connect');
+ 
+  DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(acl       => 'www.xml',
+                                       principal => 'PALOMA',
+                                       is_grant  => true,
+                                       privilege => 'resolve');
+ 
+  DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl  => 'www.xml',
+                                    host => 'babuino-smtp.gonzalonazareno.org');
+END;
+/
+COMMIT;
+exec prueba_correo;
+
+
+--Procedimiento para mandar correos:
+create or replace procedure Enviar(p_envia varchar2, 
+   																 p_recibe varchar2, 
+   																 p_asunto varchar2, 
+  																 p_cuerpo varchar2, 
+   																 p_host varchar2) 
+IS 
+  v_mailhost varchar2(80) := ltrim(rtrim(p_host)); 
+  v_mail_conn    utl_smtp.connection;  
+   
+  v_crlf varchar2( 2 ):= CHR( 13 ) || CHR( 10 ); 
+  v_mesg varchar2( 1000 ); 
+BEGIN 
+  v_mail_conn := utl_smtp.open_connection(mailhost, 25); 
+  v_mesg:= 'Date: ' || TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' ) || v_crlf || 
+         'From:  <'||p_envia||'>' || v_crlf || 
+         'Subject: '||p_asunto || v_crlf || 
+         'To: '||p_recibe || v_crlf || 
+         '' || v_crlf || p_cuerpo; 
+ 
+  utl_smtp.helo(v_mail_conn, v_mailhost); 
+  utl_smtp.mail(v_mail_conn, p_envia);  
+  utl_smtp.rcpt(v_mail_conn, p_recibe); 
+  utl_smtp.data(v_mail_conn, v_mesg);   
+  utl_smtp.quit(v_mail_conn);         
+END; 
+/
+
+
+--TRIGGER QUE ENVIE CORREOS
+create or replace trigger EnviarCorreoCliente
+after insert or update of fecha on facturas
+for each row
+declare
+	v_correo personas.email%type;
+begin
+	v_correo:=DevolverEmail(:new.codigoestancia)
+	if v_correo!='-1' then
+		RellenarPaqueteFactura(:new.codigoestancia)
+		
+	end if;
+end CorreoInvestigadorPuntuacion;
+/
+
+procedure RellenarPaqueteFactura (p_codEst estancias.codigo%type,
+    p_fechaInicio estancias.FECHAINICIO%type,
+    p_fechaFin estancias.FECHAFIN%type,
+    p_codReg estancias.CodigoRegimen%type,
+    p_codTipoHab habitaciones.CodigoTipo%type)
+is
+begin
+	RellenarDatosEstancia(p_codEst, p_fechaInicio, p_fechaFin, p_codReg, p_codTipoHab);
+	RellenarGastosExtras(p_codEst);
+	RellenarActividades(p_codEst);
+end RellenarPaqueteFactura;
+
+
+procedure RellenarGastosExtras (p_codEst estancias.codigo%type)
+is
+	cursor c_gastosextras
+	is
+	select concepto, cuantia
+	from gastosextras
+	where codigoestancia=p_codEst;
+	v_gastoextra c_gastosExtras%ROWTYPE;
+begin
+	for v_gastoextra in c_gastosExtras loop
+		CrearFilaPaqueteFactura(v_gastoextra.concepto, v_gastoextra.cuantia);
+	end loop;
+end RellenarGastosExtras;
+
+
+procedure RellenarActividades(p_codEst estancias.codigo%type)
+is
+	cursor c_actividades
+	is
+	select a.precioporpersona as PORPERSONA, a.nombre as ACTIVIDAD, ar.numpersonas as NUMPERSONA
+	from actividades a, actividadesrealizadas ar
+	where ar.codigoestancia=p_codEst
+	and ar.codigoactividad=a.codigo
+	and ar.abonado=0;
+	v_actividades c_actividades%ROWTYPE;
+	v_coste number(6,2);
+begin
+	for v_actividades in c_actividades loop
+		v_coste:=v_actividades.PORPERSONA*v_actividades.NUMPERSONA;
+		CrearFilaPaqueteFactura(v_actividades.ACTIVIDAD, v_coste);
+	end loop;
+end RellenarActividades;
+
+
+
+
+function DevolverEmail (p_codEst facturas.codigoestancia%type)
+return personas.email%type
+is
+	v_email personas.email%type;
+begin
+	select EMAIL into v_email
+	from PERSONAS
+	where NIF = (select NIFCliente
+	from ESTANCIAS
+	where CODIGO = p_codEst);
+	return v_email;
+exception
+    when NO_DATA_FOUND then
+	return '-1';
+end DevolverEmail;
+
+
+
+procedure RellenarDatosEstancia(p_codEst estancias.codigo%type,
+  															p_fechaInicio estancias.FECHAINICIO%type,
+      													p_fechaFin estancias.FECHAFIN%type,
+ 	 															p_codReg estancias.CodigoRegimen%type,
+	  														p_codTipoHab habitaciones.CodigoTipo%type)
+is
+	v_dias number;
+	v_codTemp temporadas.codigo%type;
+	v_precioPorDia tarifas.PrecioporDia%type;
+begin
+	v_dias:=ObtenerNumeroDias(p_fechaInicio, p_fechaFin);
+	for i in 1..v_dias loop
+		v_codTemp:=ObtenerTemporada(p_fechaFin+i);
+		v_precioPorDia:=ObtenerPrecioPorDia(v_codTemp, p_codReg, p_codTipoHab);
+		CrearFilaPaqueteFactura('Dia '||i, v_precioPorDia);
+end loop;
+end RellenarDatosEstancia;
+
+
+function ObtenerNumeroDias(p_fechaInicio estancias.FECHAINICIO%type,
+											     p_fechaFin estancias.FECHAFIN%type)
+return number
+is
+	v_dias number;
+begin
+	v_dias:=trunc(p_fechaFin-p_fechaInicio);
+return v_dias;
+end ObtenerNumeroDias;
+
+
+function ObtenerTemporada (p_fecha estancias.FECHAINICIO%type)
+return temporadas.codigo%type
+is
+	cursor c_temporadas
+	is
+	select fecha_inicio, fecha_fin, codigo
+	from temporadas;
+	v_temporada c_temporadas%ROWTYPE;
+begin
+	for v_temporada in c_temporadas loop
+		if p_fecha between v_temporada.fecha_inicio and v_temporada.fecha_fin then
+			return v_temporada.codigo;
+		end if;
+	end loop;
+end ObtenerTemporada;
+
+
+function ObtenerPrecioPorDia (p_codTemp temporadas.codigo%type,
+															p_codReg estancias.CodigoRegimen%type,
+															p_codTipoHab habitaciones.CodigoTipo%type)
+return number
+is
+	v_cuantia tarifas.preciopordia%type;
+begin
+	select preciopordia into v_cuantia
+	from tarifas
+	where codigotipohabitacion=p_codTipoHab
+	and codigoRegimen=p_codReg
+	and codigoTemporada=p_codTemp;
+	return v_cuantia;
+end ObtenerPrecioPorDia;
+
+
+
+procedure CrearFilaPaqueteFactura(p_concepto varchar2,
+    															p_cuantia number)
+is
+begin
+	PkgFactura.v_TabFactura(PkgFactura.v_TabFactura.LAST+1).concepto:=p_concepto;
+	PkgFactura.v_TabFactura(PkgFactura.v_TabFactura.LAST).cuantia:=p_cuantia;
+exception
+	when value_error then
+		PkgFactura.v_TabFactura(1).concepto:=p_concepto;
+		PkgFactura.v_TabFactura(1).cuantia:=p_cuantia;
+end CrearFilaPaqueteFactura;
+
+
+
+create or replace procedure MandarCorreo(p_NIF personas.nif%type,  						 															 
+																				 p_NOMBRE personas.nombre%type,
+ 																				 p_APELLIDOS personas.apellidos%type,
+ 																				 p_FECHAINICIO estancias.fechainicio%type,
+ 																				 p_FECHAFIN estancias.fechafin%type,
+ 																				 p_correo personas.email%type)
+is
+	v_cont number(6,2):=0;
+	v_cuerpomedio varchar2(500);
+	v_cuerpo varchar2(1000);
+begin
+	for i in PkgFactura.v_TabFactura.FIRST .. PkgFactura.v_TabFactura.LAST loop
+		v_cuerpo:=(v_cuerpo||PkgFactura.v_TabFactura(i).concepto||'  -	'||PkgFactura.v_TabFactura(i).cuantia||chr(10));
+		v_cont:=v_cont+PkgFactura.v_TabFactura(i).cuantia;
+	end loop;
+	enviar ('oracle@servidororacle', p_correo, 'Hotel Rural', 'Estimado cliente '||p_nombre ||' '||p_apellidos||chr(10)||'Su factura para la estancia en Hotel Rural durante los dias '||p_fechainicio||' '||p_fechafin||' ya está disponible.'||chr(10)||v_cuerpo||'Total: '||v_cont||chr(10)||'Atentamente, la empresa'||chr(10)||sysdate, 'babuino-smtp.gonzalonazareno.org');
+end MandarCorreo;
+
+
+
 --5. Añade a la tabla Actividades una columna llamada BalanceHotel. La columna contendrá la cantidad que debe pagar el hotel a la empresa (en cuyo caso tendrá signo positivo) o la empresa al hotel (en cuyo caso tendrá signo negativo) a causa de las Actividades Realizadas por los clientes. Realiza un procedimiento que rellene dicha columna y un trigger que la mantenga actualizada cada vez que la tabla ActividadesRealizadas sufra cualquier cambio.
 
 alter table ACTIVIDADES add BalanceHotel number(6,2) default 0;
