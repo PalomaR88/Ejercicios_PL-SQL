@@ -132,20 +132,25 @@ after insert or update of fecha on facturas
 for each row
 declare
 	v_correo personas.email%type;
+	select p.nif as v_nif, p.nombre as v_nombre, p.apellidos as v_apellidos, e.fechainicio as v_fechaInicio, e.fechafin as v_fechaFin, e.codigoregimen as v_codReg, h.codigotipo as v_tipoHab
+	from personas p, estancias e, habitaciones h
+	where e.codigo=:new.codigoestancia
+	and e.numerohabitacion=h.numero
+	and p.nif=e.nifcliente;
 begin
-	v_correo:=DevolverEmail(:new.codigoestancia)
+	v_correo:=DevolverEmail(:new.codigoestancia);
 	if v_correo!='-1' then
-		RellenarPaqueteFactura(:new.codigoestancia)
-		
+		RellenarPaqueteFactura(:new.codigoestancia, v_fechaInicio, v_fechaFin, v_codReg, v_tipoHab);
+		MandarCorreo(v_NIF, v_NOMBRE, v_APELLIDOS, v_FECHAINICIO, v_FECHAFIN, v_correo);
 	end if;
 end CorreoInvestigadorPuntuacion;
 /
 
 procedure RellenarPaqueteFactura (p_codEst estancias.codigo%type,
-    p_fechaInicio estancias.FECHAINICIO%type,
-    p_fechaFin estancias.FECHAFIN%type,
-    p_codReg estancias.CodigoRegimen%type,
-    p_codTipoHab habitaciones.CodigoTipo%type)
+    															p_fechaInicio estancias.FECHAINICIO%type,
+    															p_fechaFin estancias.FECHAFIN%type,
+    															p_codReg estancias.CodigoRegimen%type,
+    															p_codTipoHab habitaciones.CodigoTipo%type)
 is
 begin
 	RellenarDatosEstancia(p_codEst, p_fechaInicio, p_fechaFin, p_codReg, p_codTipoHab);
