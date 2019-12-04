@@ -98,7 +98,7 @@ begin
                                     	 is_grant  => true,
                                     	 privilege => 'resolve');
 	DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl  => 'www.xml',
-									  host => 'babuino-smtp.gonzalonazareno.org');
+					  host => 'babuino-smtp.gonzalonazareno.org');
 end prueba_correo;
 /
 
@@ -107,10 +107,10 @@ exec prueba_correo;
 
 -- Procedimiento para mandar correos:
 create or replace procedure Enviar(p_envia varchar2, 
-								   p_recibe varchar2, 
-   								   p_asunto varchar2, 
-  								   p_cuerpo varchar2, 
-   								   p_host varchar2) 
+				   p_recibe varchar2, 
+   				   p_asunto varchar2, 
+  				   p_cuerpo varchar2, 
+   				   p_host varchar2) 
 is
 	v_mailhost varchar2(80) := ltrim(rtrim(p_host));
 	v_mail_conn    utl_smtp.connection;
@@ -161,10 +161,10 @@ end CorreoInvestigadorPuntuacion;
 /
 
 create or replace procedure RellenarPaqueteFactura(p_codEst estancias.codigo%type,
-    											   p_fechaInicio estancias.FECHAINICIO%type,
-    											   p_fechaFin estancias.FECHAFIN%type,
-    											   p_codReg estancias.CodigoRegimen%type,
-    											   p_codTipoHab habitaciones.CodigoTipo%type)
+    						   p_fechaInicio estancias.FECHAINICIO%type,
+    						   p_fechaFin estancias.FECHAFIN%type,
+    						   p_codReg estancias.CodigoRegimen%type,
+    						   p_codTipoHab habitaciones.CodigoTipo%type)
 is
 begin
 	RellenarDatosEstancia(p_codEst, p_fechaInicio, p_fechaFin, p_codReg, p_codTipoHab);
@@ -229,10 +229,10 @@ end DevolverEmail;
 
 
 create or replace procedure RellenarDatosEstancia(p_codEst estancias.codigo%type,
-  												  p_fechaInicio estancias.FECHAINICIO%type,
-      											  p_fechaFin estancias.FECHAFIN%type,
- 	 											  p_codReg estancias.CodigoRegimen%type,
-	  											  p_codTipoHab habitaciones.CodigoTipo%type)
+  						  p_fechaInicio estancias.FECHAINICIO%type,
+      						  p_fechaFin estancias.FECHAFIN%type,
+ 	 					  p_codReg estancias.CodigoRegimen%type,
+	  					  p_codTipoHab habitaciones.CodigoTipo%type)
 is
 	v_dias number;
 	v_codTemp temporadas.codigo%type;
@@ -249,7 +249,7 @@ end RellenarDatosEstancia;
 
 
 create or replace function ObtenerNumeroDias(p_fechaInicio estancias.FECHAINICIO%type,
-											 p_fechaFin estancias.FECHAFIN%type)
+					     p_fechaFin estancias.FECHAFIN%type)
 return number
 is
 	v_dias number;
@@ -279,8 +279,8 @@ end ObtenerTemporada;
 
 
 create or replace function ObtenerPrecioPorDia (p_codTemp temporadas.codigo%type,
-												p_codReg estancias.CodigoRegimen%type,
-												p_codTipoHab habitaciones.CodigoTipo%type)
+						p_codReg estancias.CodigoRegimen%type,
+						p_codTipoHab habitaciones.CodigoTipo%type)
 return number
 is
 	v_cuantia tarifas.preciopordia%type;
