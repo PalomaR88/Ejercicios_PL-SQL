@@ -94,9 +94,9 @@ begin
                                 	  is_grant    => true,
                                 	  privilege   => 'connect');
 	DBMS_NETWORK_ACL_ADMIN.ADD_PRIVILEGE(acl       => 'www.xml',
-                                    	 principal => 'PALOMA',
-                                    	 is_grant  => true,
-                                    	 privilege => 'resolve');
+                                    	     principal => 'PALOMA',
+                                    	     is_grant  => true,
+                                    	     privilege => 'resolve');
 	DBMS_NETWORK_ACL_ADMIN.ASSIGN_ACL(acl  => 'www.xml',
 					  host => 'babuino-smtp.gonzalonazareno.org');
 end prueba_correo;
@@ -119,10 +119,10 @@ is
 begin
 	v_mail_conn := utl_smtp.open_connection(mailhost, 25); 
 	v_mesg:= 'Date: ' ||TO_CHAR( SYSDATE, 'dd Mon yy hh24:mi:ss' )|| v_crlf ||
-			 'From:  <'||p_envia||'>' || v_crlf || 
-			 'Subject: '||p_asunto || v_crlf ||
-			 'To: '||p_recibe || v_crlf ||
-			 '' || v_crlf || p_cuerpo;
+		 'From:  <'||p_envia||'>' || v_crlf || 
+		 'Subject: '||p_asunto || v_crlf ||
+		 'To: '||p_recibe || v_crlf ||
+		 '' || v_crlf || p_cuerpo;
 	utl_smtp.helo(v_mail_conn, v_mailhost);
 	utl_smtp.mail(v_mail_conn, p_envia);
 	utl_smtp.rcpt(v_mail_conn, p_recibe);
@@ -139,11 +139,11 @@ for each row
 declare
 	v_correo personas.email%type;
 	select p.nif as v_nif, p.nombre as v_nombre, 
-		   p.apellidos as v_apellidos, 
-		   e.fechainicio as v_fechaInicio, 
-		   e.fechafin as v_fechaFin, 
-		   e.codigoregimen as v_codReg, 
-		   h.codigotipo as v_tipoHab
+	       p.apellidos as v_apellidos, 
+	       e.fechainicio as v_fechaInicio, 
+	       e.fechafin as v_fechaFin, 
+	       e.codigoregimen as v_codReg, 
+	       h.codigotipo as v_tipoHab
 	from personas p, estancias e, habitaciones h
 	where e.codigo=:new.codigoestancia
 	and e.numerohabitacion=h.numero
@@ -151,11 +151,11 @@ declare
 begin
 	v_correo:=DevolverEmail(:new.codigoestancia);
 	if v_correo!='-1' then
-		RellenarPaqueteFactura(:new.codigoestancia, 
-							   v_fechaInicio, v_fechaFin, 
-							   v_codReg, v_tipoHab);
+		RellenarPaqueteFactura(:new.codigoestancia,
+				       v_fechaInicio, v_fechaFin, 
+				       v_codReg, v_tipoHab);
 		MandarCorreo(v_NIF, v_NOMBRE, v_APELLIDOS, v_FECHAINICIO, 
-					 v_FECHAFIN, v_correo);
+			     v_FECHAFIN, v_correo);
 	end if;
 end CorreoInvestigadorPuntuacion;
 /
@@ -193,8 +193,8 @@ is
 	cursor c_actividades
 	is
 	select a.precioporpersona as PORPERSONA, 
-		   a.nombre as ACTIVIDAD, 
-		   ar.numpersonas as NUMPERSONA
+	       a.nombre as ACTIVIDAD, 
+	       ar.numpersonas as NUMPERSONA
 	from actividades a, actividadesrealizadas ar
 	where ar.codigoestancia=p_codEst
 	and ar.codigoactividad=a.codigo
@@ -296,7 +296,7 @@ end ObtenerPrecioPorDia;
 
 
 create or replace procedure CrearFilaPaqueteFactura(p_concepto varchar2,
-    												p_cuantia number)
+    						    p_cuantia number)
 is
 begin
 	PkgFactura.v_TabFactura(PkgFactura.v_TabFactura.LAST+1).concepto:=p_concepto;
@@ -310,11 +310,11 @@ end CrearFilaPaqueteFactura;
 
 
 create or replace procedure MandarCorreo(p_NIF personas.nif%type,  						 															 
-										 p_NOMBRE personas.nombre%type,
- 										 p_APELLIDOS personas.apellidos%type,
- 										 p_FECHAINICIO estancias.fechainicio%type,
- 										 p_FECHAFIN estancias.fechafin%type,
- 										 p_correo personas.email%type)
+					 p_NOMBRE personas.nombre%type,
+ 					 p_APELLIDOS personas.apellidos%type,
+ 					 p_FECHAINICIO estancias.fechainicio%type,
+ 					 p_FECHAFIN estancias.fechafin%type,
+ 					 p_correo personas.email%type)
 is
 	v_cont number(6,2):=0;
 	v_cuerpomedio varchar2(500);
@@ -326,11 +326,11 @@ begin
 		v_cont:=v_cont+PkgFactura.v_TabFactura(i).cuantia;
 	end loop;
 	enviar ('oracle@servidororacle', p_correo, 'Hotel Rural', 'Estimado cliente '||
-			p_nombre ||' '||p_apellidos||chr(10)||
-			'Su factura para la estancia en Hotel Rural durante los dias '||
-			p_fechainicio||' '||p_fechafin||' ya está disponible.'||chr(10)||
-			v_cuerpo||'Total: '||v_cont||chr(10)||'Atentamente, la empresa'||chr(10)||
-			sysdate, 'babuino-smtp.gonzalonazareno.org');
+		p_nombre ||' '||p_apellidos||chr(10)||
+		'Su factura para la estancia en Hotel Rural durante los dias '||
+		p_fechainicio||' '||p_fechafin||' ya está disponible.'||chr(10)||
+		v_cuerpo||'Total: '||v_cont||chr(10)||'Atentamente, la empresa'||chr(10)||
+		sysdate, 'babuino-smtp.gonzalonazareno.org');
 end MandarCorreo;
 /
 
@@ -351,8 +351,8 @@ create or replace procedure IntroducirDatosBalance
 is
     cursor c_balance is
     select a.codigo as codAct, a.comisionhotel as comision, 
-		   a.costepersonahotel as costPersH, ar.numpersonas as numPer, 
-		   e.codigoRegimen as codReg
+	   a.costepersonahotel as costPersH, ar.numpersonas as numPer, 
+	   e.codigoRegimen as codReg
     from actividades a, actividadesrealizadas ar, estancias e
     where a.codigo=ar.codigoactividad
     and ar.codigoestancia=e.codigo;
@@ -360,8 +360,8 @@ is
 begin
     for v_balance in c_balance loop
         InsertarDatoBalance(v_balance.codAct, v_balance.comision, 
-							v_balance.costPersH, v_balance.numPer, 
-							v_balance.codReg);
+			    v_balance.costPersH, v_balance.numPer, 
+			    v_balance.codReg);
     end loop;
 end IntroducirDatosBalance;
 /
@@ -410,25 +410,25 @@ begin
 	case 
 		when inserting then
 			CambiarBalance(:new.codigoactividad, :new.codigoestancia, 
-						   :new.fecha, :new.numPersonas, 1);
+				       :new.fecha, :new.numPersonas, 1);
 		when updating then
-			CambiarBalance(:old.codigoactividad, :old.codigoestancia, 
-						   :old.fecha, :old.numPersonas, 0);
-			CambiarBalance(:new.codigoactividad, :new.codigoestancia, 
-						   :new.fecha, :new.numPersonas, 1);
+			CambiarBalance(:old.codigoactividad, :old.codigoestancia,
+				       :old.fecha, :old.numPersonas, 0);
+			CambiarBalance(:new.codigoactividad, :new.codigoestancia,
+				       :new.fecha, :new.numPersonas, 1);
 		when deleting then
-			CambiarBalance(:old.codigoactividad, :old.codigoestancia, 
-						   :old.fecha, :old.numPersonas, 0);
+			CambiarBalance(:old.codigoactividad, :old.codigoestancia,
+				       :old.fecha, :old.numPersonas, 0);
 	end case;
 end ActualizarBalanceActR;
 /
 
 
-create or replace procedure CambiarBalance (p_codAct actividades.codigo%type, 
-											p_codEst estancias.codigo%type, 
-											p_fecha actividadesrealizadas.fecha%type,
-											p_numPers actividadesrealizadas.numPersonas%type,
-											p_borraroponer number)
+create or replace procedure CambiarBalance (p_codAct actividades.codigo%type,
+					    p_codEst estancias.codigo%type,
+					    p_fecha actividadesrealizadas.fecha%type,
+					    p_numPers actividadesrealizadas.numPersonas%type,
+					    p_borraroponer number)
 is
 	v_comision actividades.comisionhotel%type;
 	v_costPersH actividades.costepersonahotel%type;
@@ -441,11 +441,11 @@ begin
     where a.codigo=p_codAct
     and e.codigo=p_codEst;
 		if p_borraroponer=1 then
-			InsertarDatoBalance (p_codAct, v_comision, v_costPersH, 
-								 p_numPers, v_codReg);
+			InsertarDatoBalance (p_codAct, v_comision, v_costPersH,
+					     p_numPers, v_codReg);
 		else
-			EliminarDatoBalance(p_codAct, v_comision, v_costPersH, 
-								p_numPers, v_codReg);
+			EliminarDatoBalance(p_codAct, v_comision, v_costPersH,
+					    p_numPers, v_codReg);
 		end if;
 end CambiarBalance;
 /
@@ -512,9 +512,9 @@ end;
 $$ LANGUAGE PLPGSQL;
 
 
-create or replace function SumarParticipantes(p_codAct actividades.codigo%type, 
-											  p_fecha actividadesrealizadas.fecha%type, 
-											  p_numPer actividadesrealizadas.numPersonas%type)
+create or replace function SumarParticipantes(p_codAct actividades.codigo%type,
+					      p_fecha actividadesrealizadas.fecha%type,
+					      p_numPer actividadesrealizadas.numPersonas%type)
 returns numeric as $$
 declare
 	v_numero numeric;
@@ -538,9 +538,9 @@ end;
 $$ LANGUAGE PLPGSQL;
 
 
-create or replace function AñadirFilaParticipantes(p_codAct actividades.codigo%type, 
-												   p_fecha actividadesrealizadas.fecha%type, 
-												   p_numPer actividadesrealizadas.numPersonas%type)
+create or replace function AñadirFilaParticipantes(p_codAct actividades.codigo%type,
+						   p_fecha actividadesrealizadas.fecha%type,
+						   p_numPer actividadesrealizadas.numPersonas%type)
 returns numeric as $$
 declare
 begin
@@ -549,9 +549,9 @@ end;
 $$ LANGUAGE PLPGSQL;
 
 
-create or replace function SumarParticipantes (p_codAct actividades.codigo%type, 
-											   p_fecha actividadesrealizadas.fecha%type, 
-											   p_numPer actividadesrealizadas.numPersonas%type)
+create or replace function SumarParticipantes (p_codAct actividades.codigo%type,
+					       p_fecha actividadesrealizadas.fecha%type,
+					       p_numPer actividadesrealizadas.numPersonas%type)
 returns numeric as $$
 declare
 begin
