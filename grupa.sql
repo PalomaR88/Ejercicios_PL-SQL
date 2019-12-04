@@ -1,4 +1,6 @@
---4. Realiza un trigger que cada vez que se inserte una puntuación menor de 5, informe de este hecho por correo electrónico al investigador responsable del experimento, incluyendo en el correo la fecha de la prueba, el aspecto valorado y donde vive el catador.
+--4. Realiza un trigger que cada vez que se inserte una puntuación menor de 5, 
+--informe de este hecho por correo electrónico al investigador responsable del experimento, 
+--incluyendo en el correo la fecha de la prueba, el aspecto valorado y donde vive el catador.
 
 --INSTALACION DEL CLIENTE DE CORREO POSTFIX
 oracle@so:~$ sudo apt-get update
@@ -100,11 +102,11 @@ exec prueba_correo;
 
 
 --Procedimiento para mandar correos:
-create or replace procedure Enviar(p_envia varchar2, 
-   																 p_recibe varchar2, 
-   																 p_asunto varchar2, 
-  																 p_cuerpo varchar2, 
-   																 p_host varchar2) 
+create or replace procedure Enviar(p_envia varchar2,
+				   p_recibe varchar2,
+				   p_asunto varchar2,
+				   p_cuerpo varchar2,
+				   p_host varchar2) 
 IS 
   v_mailhost varchar2(80) := ltrim(rtrim(p_host)); 
   v_mail_conn    utl_smtp.connection;  
@@ -146,9 +148,9 @@ end CorreoInvestigadorPuntuacion;
 
 
 create or replace procedure EnviarCorreoInvestigador (p_nifCat catadores.nif%type, 
-																											p_codAsp aspectos.codigo%type, 
-																											p_codVer versiones.codigo%type, 
-																											p_codExp experimentos.codigo%type)
+						      p_codAsp aspectos.codigo%type,
+						      p_codVer versiones.codigo%type,
+						      p_codExp experimentos.codigo%type)
 is
 	v_correo investigadores.email%type;
 begin
@@ -168,8 +170,8 @@ begin
 	select email into v_correo
 	from investigadores
 	where nif=(select nif_inv
-						 from experimentos
-						 where codigo=p_codExp);
+		   from experimentos
+		   where codigo=p_codExp);
 	return v_correo;
 exception
 	when NO_DATA_FOUND then
@@ -178,11 +180,11 @@ end ObtenerCorreoInvestigador;
 /
 
 
-create or replace procedure CrearCorreo(p_nifCat catadores.nif%type, 																					
-																				p_codAsp aspectos.codigo%type, 																					
-																				p_codVer versiones.codigo%type, 																				
-																				p_codExp experimentos.codigo%type, 																					
-																				p_correo investigadores.email%type)
+create or replace procedure CrearCorreo(p_nifCat catadores.nif%type,
+					p_codAsp aspectos.codigo%type,
+					p_codVer versiones.codigo%type,
+					p_codExp experimentos.codigo%type, 																					
+					p_correo investigadores.email%type)
 is
 	v_fechaPrueba versiones.fecha_prueba%type;
 	v_nombreAsp 	aspectos.descripcion%type;
@@ -228,7 +230,7 @@ end SaberNombreAspecto;
 
 
 create or replace function SaberFechaPrueba(p_codVer versiones.codigo%type,
-																						p_codAsp aspectos.codigo%type)
+					    p_codAsp aspectos.codigo%type)
 return versiones.fecha_prueba%type
 is
 	v_fecha versiones.fecha_prueba%type;
@@ -245,16 +247,17 @@ end SaberFechaPrueba;
 /
 
 
-create or replace procedure EnviarCorreo (p_correo 			investigadores.email%type, 
-																					p_fechaPrueba versiones.fecha_prueba%type, 
-																					p_nombreAsp 	aspectos.descripcion%type, 
-																					p_dirCat 			catadores.direccion%type,
-																					p_codExp 			experimentos.codigo%type,
-																					p_codVer 			versiones.codigo%type)
+create or replace procedure EnviarCorreo (p_correo investigadores.email%type,
+					  p_fechaPrueba versiones.fecha_prueba%type,
+					  p_nombreAsp aspectos.descripcion%type,
+					  p_dirCat catadores.direccion%type,
+					  p_codExp experimentos.codigo%type,
+					  p_codVer versiones.codigo%type)
 is
 	v_cuerpo varchar2(1000);
 begin
-	v_cuerpo:='Se le informa que la versión '||p_codVer||' del experimento '||p_codExp||' a sido puntuado con una nota muy baja:'||chr(10);
+	v_cuerpo:='Se le informa que la versión '||p_codVer||' del experimento '||
+		  p_codExp||' a sido puntuado con una nota muy baja:'||chr(10);
 	if to_char(p_fechaPrueba,'dd/mm/yyyy')!='01/01/0001'then
 		v_cuerpo:=v_cuerpo||'Fecha de la prueba: '||p_fechaprueba||chr(10);
 	end if;
@@ -264,7 +267,8 @@ begin
 	if p_dirCat!='-1' then
 		v_cuerpo:=v_cuerpo||'Dirección del catador: '||p_dirCat||chr(10);
 	end if;
-	Enviar ('oracle@servidororacle',p_correo,'Puntuacion baja en versiones',v_cuerpo,'babuino-smtp.gonzalonazareno.org');
+	Enviar ('oracle@servidororacle',p_correo,'Puntuacion baja en versiones',
+		v_cuerpo,'babuino-smtp.gonzalonazareno.org');
 end EnviarCorreo;
 /
 
